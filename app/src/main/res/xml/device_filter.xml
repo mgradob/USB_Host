@@ -37,8 +37,12 @@
     <usb-device vendor-id="067B" product-id="25A1" />
 
     <!-- 0x067B / 0x2303: Prolific PL2303 -->
-    <usb-device vendor-id="8137" product-id="131" />
+    <usb-device vendor-id="1FC9" product-id="0083" />
 
     <!-- 0x067B / 0x2303: Prolific PL2303 -->
-    <usb-device vendor-id="8888" product-id="10864" />
+    <usb-device vendor-id="22B8" product-id="2A70" />
+
+    <usb-device vendor-id="1659" product-id="8963" />
+    <usb-device vendor-id="1659" product-id="8964" />
+    <usb-device vendor-id="1659" product-id="41216" />
 </resources>

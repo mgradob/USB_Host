@@ -1,7 +1,10 @@
 package com.itesm.mgb.usbhost;
 
 import android.app.Activity;
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
 import android.os.Bundle;
@@ -32,8 +35,9 @@ public class MainActivity extends Activity {
     EditText cmdET;
 
     PL2303Driver driver;
+    private UsbManager mUsbManger;
 
-    private static final String ACTION_USB_PERMISSION = "com.prolific.pl2303hxdsimpletest.USB_PERMISSION";
+    private static final String ACTION_USB_PERMISSION = "com.itesm.mgb.usbhost.USB_PERMISSION";
 
     private PL2303Driver.BaudRate mBaudrate = PL2303Driver.BaudRate.B9600;
     private PL2303Driver.DataBits mDataBits = PL2303Driver.DataBits.D8;
@@ -50,12 +54,15 @@ public class MainActivity extends Activity {
         sendBTN = (Button) findViewById(R.id.sendBTN);
         cmdET = (EditText) findViewById(R.id.textET);
 
-        driver = new PL2303Driver((UsbManager) getSystemService(Context.USB_SERVICE), this, ACTION_USB_PERMISSION);
+        mUsbManger = (UsbManager) getSystemService(Context.USB_SERVICE);
+
+        /*driver = new PL2303Driver((UsbManager) getSystemService(Context.USB_SERVICE), this, ACTION_USB_PERMISSION);
+        Toast.makeText(this, "Driver: " + driver, Toast.LENGTH_SHORT).show();
 
         if(!driver.PL2303USBFeatureSupported()){
             Toast.makeText(this, "No support for USB host API", Toast.LENGTH_SHORT).show();
             driver = null;
-        }
+        }*/
 
         sendBTN.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -65,24 +72,28 @@ public class MainActivity extends Activity {
         });
     }
 
+    /*
     void openConnection(){
         if (driver == null) return;
 
-        if (!driver.isConnected()){
+        try {
+            int res = driver.setup(mBaudrate, mDataBits, mStopBits, mParity, mFlowControl);
+            Toast.makeText(this, "Connection, result: " + res, Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Didn't setup", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (driver.isConnected()) {
             mBaudrate = PL2303Driver.BaudRate.B9600;
 
-            if (!driver.InitByBaudRate(mBaudrate, 1000)){
+            if (!driver.InitByBaudRate(mBaudrate)) {
                 Toast.makeText(this, "Something happened", Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(this, "Connected", Toast.LENGTH_SHORT).show();
             }
-        } else {
-            try {
-                driver.setup(mBaudrate, mDataBits, mStopBits, mParity, mFlowControl);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        } else return;
 
         String data = mainTV.getText().toString();
         int result = driver.write(data.getBytes());
@@ -103,20 +114,24 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "Len: " + len, Toast.LENGTH_SHORT).show();
         } else
             Toast.makeText(this, "0 length or negative", Toast.LENGTH_SHORT).show();
-    }
 
-    /*private void openConnection(){
-        final UsbManager mUsbManger = (UsbManager) getSystemService(Context.USB_SERVICE);
+        driver.end();
+    }*/
+
+    private void openConnection(){
+        Toast.makeText(this, "Opening connection", Toast.LENGTH_SHORT).show();
+
         List<UsbSerialDriver> availableDrivers = UsbSerialProber.getDefaultProber().findAllDrivers(mUsbManger);
         List<UsbSerialDriver> proberDrivers;
         UsbSerialDriver driver;
 
         if (availableDrivers.isEmpty()) {
+            Toast.makeText(this, "Probing for specific device", Toast.LENGTH_SHORT).show();
             mainTV.append("No devices attached :(");
 
             ProbeTable customTable = new ProbeTable();
-            customTable.addProduct(8137, 131, ProlificSerialDriver.class);
-            customTable.addProduct(8888, 10864, ProlificSerialDriver.class);
+            customTable.addProduct(0x1FC9, 0x0083, ProlificSerialDriver.class);
+            customTable.addProduct(0x22B8, 0x2A70, ProlificSerialDriver.class);
 
             UsbSerialProber prober = new UsbSerialProber(customTable);
             proberDrivers = prober.findAllDrivers(mUsbManger);
@@ -124,8 +139,22 @@ public class MainActivity extends Activity {
             if (proberDrivers.isEmpty()) return;
 
             driver = proberDrivers.get(0);
+
+            String id;
+            id = "DeviceID: " + driver.getDevice().getDeviceId();
+            id += "\nDeviceVendorID: " + driver.getDevice().getVendorId();
+            id += "\nDeviceProductID: " + driver.getDevice().getProductId();
+
+            Toast.makeText(this, "Driver: " + driver.getDevice().getDeviceName() + "\n" + id, Toast.LENGTH_SHORT).show();
         } else {
-            driver = availableDrivers.get(0);
+            driver = availableDrivers.get(1);
+
+            String id;
+            id = "DeviceID: " + driver.getDevice().getDeviceId();
+            id += "\nDeviceVendorID: " + driver.getDevice().getVendorId();
+            id += "\nDeviceProductID: " + driver.getDevice().getProductId();
+
+            Toast.makeText(this, "Driver: " + driver.getDevice().getDeviceName() + "\n" + id, Toast.LENGTH_SHORT).show();
         }
 
         UsbDeviceConnection connection = mUsbManger.openDevice(driver.getDevice());
@@ -161,5 +190,5 @@ public class MainActivity extends Activity {
                 Log.e("Error", "Can't close port");
             }
         }
-    }*/
+    }
 }
