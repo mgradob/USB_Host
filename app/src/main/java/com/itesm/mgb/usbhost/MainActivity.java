@@ -1,9 +1,11 @@
 package com.itesm.mgb.usbhost;
 
 import android.app.Activity;
+import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.hardware.usb.UsbDevice;
 import android.hardware.usb.UsbDeviceConnection;
 import android.hardware.usb.UsbManager;
@@ -23,7 +25,9 @@ import com.hoho.android.usbserial.driver.UsbSerialPort;
 import com.hoho.android.usbserial.driver.UsbSerialProber;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import tw.com.prolific.driver.pl2303.PL2303Driver;
 
@@ -36,6 +40,9 @@ public class MainActivity extends Activity {
 
     PL2303Driver driver;
     private UsbManager mUsbManger;
+
+    private BroadcastReceiver mUsBroadcastReceiver;
+    private PendingIntent mPermissionIntent;
 
     private static final String ACTION_USB_PERMISSION = "com.itesm.mgb.usbhost.USB_PERMISSION";
 
@@ -56,13 +63,44 @@ public class MainActivity extends Activity {
 
         mUsbManger = (UsbManager) getSystemService(Context.USB_SERVICE);
 
-        /*driver = new PL2303Driver((UsbManager) getSystemService(Context.USB_SERVICE), this, ACTION_USB_PERMISSION);
+        mPermissionIntent = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), 0);
+
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(UsbManager.ACTION_USB_ACCESSORY_ATTACHED);
+        filter.addAction(UsbManager.ACTION_USB_ACCESSORY_DETACHED);
+        filter.addAction(ACTION_USB_PERMISSION);
+        registerReceiver(mUsBroadcastReceiver, filter);
+
+        HashMap<String, UsbDevice> deviceList = mUsbManger.getDeviceList();
+        for (HashMap.Entry<String, UsbDevice> entry : deviceList.entrySet()){
+            UsbDevice aDevice = entry.getValue();
+            if(!mUsbManger.hasPermission(aDevice)){
+                mUsbManger.requestPermission(aDevice, mPermissionIntent);
+            }
+        }
+
+        /*
+        driver = new PL2303Driver((UsbManager) getSystemService(Context.USB_SERVICE), this, ACTION_USB_PERMISSION);
         Toast.makeText(this, "Driver: " + driver, Toast.LENGTH_SHORT).show();
 
         if(!driver.PL2303USBFeatureSupported()){
             Toast.makeText(this, "No support for USB host API", Toast.LENGTH_SHORT).show();
             driver = null;
+        }
+
+        if (driver != null) {
+            if(driver.PL2303Device_IsHasPermission()){
+                Toast.makeText(this, "OK Permission", Toast.LENGTH_SHORT).show();
+            } else
+                Toast.makeText(this, "NO Permission", Toast.LENGTH_SHORT).show();
+
+            if(driver.PL2303Device_IsSupportChip()){
+                Toast.makeText(this, "Chip Supported", Toast.LENGTH_SHORT).show();
+            } else
+                Toast.makeText(this, "Chip Not Supported", Toast.LENGTH_SHORT).show();
         }*/
+
+
 
         sendBTN.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -76,19 +114,19 @@ public class MainActivity extends Activity {
     void openConnection(){
         if (driver == null) return;
 
-        try {
-            int res = driver.setup(mBaudrate, mDataBits, mStopBits, mParity, mFlowControl);
-            Toast.makeText(this, "Connection, result: " + res, Toast.LENGTH_SHORT).show();
-        } catch (IOException e) {
-            e.printStackTrace();
-            Toast.makeText(this, "Didn't setup", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (driver.isConnected()) {
+        if (!driver.isConnected()) {
             mBaudrate = PL2303Driver.BaudRate.B9600;
 
-            if (!driver.InitByBaudRate(mBaudrate)) {
+            try {
+                int res = driver.setup(mBaudrate, mDataBits, mStopBits, mParity, mFlowControl);
+                Toast.makeText(this, "Connection, result: " + res, Toast.LENGTH_SHORT).show();
+            } catch (IOException e) {
+                e.printStackTrace();
+                Toast.makeText(this, "Didn't setup", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (driver.InitByBaudRate(mBaudrate)) {
                 Toast.makeText(this, "Something happened", Toast.LENGTH_SHORT).show();
             } else {
                 Toast.makeText(this, "Connected", Toast.LENGTH_SHORT).show();
@@ -118,6 +156,7 @@ public class MainActivity extends Activity {
         driver.end();
     }*/
 
+
     private void openConnection(){
         Toast.makeText(this, "Opening connection", Toast.LENGTH_SHORT).show();
 
@@ -130,8 +169,7 @@ public class MainActivity extends Activity {
             mainTV.append("No devices attached :(");
 
             ProbeTable customTable = new ProbeTable();
-            customTable.addProduct(0x1FC9, 0x0083, ProlificSerialDriver.class);
-            customTable.addProduct(0x22B8, 0x2A70, ProlificSerialDriver.class);
+            customTable.addProduct(1659, 8963, ProlificSerialDriver.class);
 
             UsbSerialProber prober = new UsbSerialProber(customTable);
             proberDrivers = prober.findAllDrivers(mUsbManger);
